@@ -10,4 +10,4 @@ current.execute("""CREATE TABLE IF NOT EXISTS notify(data DATE, what TEXT, when 
 connect.commit()
 current.close()
 
-
+print()

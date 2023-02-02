@@ -1,2 +1,2 @@
 my_token = "5835343964:AAFv0RsaP-DfwDVRZopTnQ8WQk90u8hfEPQ"
-user = ["711513365"]
+users = ["711513365"]

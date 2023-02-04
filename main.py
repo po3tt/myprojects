@@ -47,14 +47,17 @@ class Form(StatesGroup):
 @form_router.message(Form.noti)
 async def process_name(message: types.Message, state: FSMContext)-> None:
     await state.update_data(noti=message.text)
-    add_noty = [i.split("-") for i in message.text.split()]
-    for i in add_noty:
-        learn_notify(i)
-        dt=datetime.datetime.now()
-        db.append([dt.strftime("%d.%m.%Y %H:%M"),i[0],i[1],"",""])
-    print(db)
-    await message.answer(f"Задачи добавлены!")
-    await state.clear()
+    if "-" in message.text:
+        add_noty = [i.split("-") for i in message.text.split()]
+        for i in add_noty:
+            func.learn_notify(i)
+            dt=datetime.datetime.now()
+            db.append([dt.strftime("%d.%m.%Y %H:%M"),i[0],i[1],"",""])
+        print(db)
+        await message.answer(f"Задачи добавлены!")
+        await state.clear()
+    else:
+        await message.answer(f"Неправильный формат ввода!")
 
 @form_router.message()
 async def start(message: types.Message, state: FSMContext):

@@ -7,8 +7,14 @@ from aiogram import Bot, Dispatcher, types, F, Router, html
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup
 from aiogram.filters.state import State, StatesGroup
+import datetime
+import func
 #конец библиотек-----------------------------------------
 #создание таблиц БД
+db = []
+
+
+
 '''
 connect = sqlite3.connect('noty.db')
 current = connect.cursor()
@@ -28,7 +34,7 @@ kb = [[types.KeyboardButton(text=btn1),types.KeyboardButton(text=btn2)],[types.K
 kb = types.ReplyKeyboardMarkup(keyboard=kb,resize_keyboard=True,input_field_placeholder="Выберите что-либо =)")
 btn11 = "Еще"
 btn22 = "Хватит"
-kb1 = [[types.KeyboardButton(text=btn1),types.KeyboardButton(text=btn2)]]
+kb1 = [[types.KeyboardButton(text=btn11),types.KeyboardButton(text=btn22)]]
 kb1 = types.ReplyKeyboardMarkup(keyboard=kb1,resize_keyboard=True,input_field_placeholder="Выберите что-либо =)")
 
 #события
@@ -38,6 +44,18 @@ class Form(StatesGroup):
 
 
 
+@form_router.message(Form.noti)
+async def process_name(message: types.Message, state: FSMContext)-> None:
+    await state.update_data(noti=message.text)
+    add_noty = [i.split("-") for i in message.text.split()]
+    for i in add_noty:
+        learn_notify(i)
+        dt=datetime.datetime.now()
+        db.append([dt.strftime("%d.%m.%Y %H:%M"),i[0],i[1],"",""])
+    print(db)
+    await message.answer(f"Задачи добавлены!")
+    await state.clear()
+
 @form_router.message()
 async def start(message: types.Message, state: FSMContext):
     print(message.from_user.id)
@@ -46,15 +64,9 @@ async def start(message: types.Message, state: FSMContext):
             await message.answer("Меню",reply_markup=kb)
 
         if message.text == btn1 or message.text == btn11:
-            print("eeee")
             await state.set_state(Form.noti)
-
-
-@form_router.message(Form.noti)
-async def process_name(message: types.Message, state: FSMContext)-> None:
-    await state.update_data(noti=message.text)
-    await message.answer(f"Еще?",reply_markup=kb1)
-
+            await message.answer(f"Введите задачу и когда напомнить в формате: задача-когда/ДД.ММ.ГГГГ НН:ММ")
+            
 
 
 async def main():

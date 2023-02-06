@@ -32,10 +32,7 @@ btn2 = "Удалить"
 btn3 = "Тест"
 kb = [[types.KeyboardButton(text=btn1),types.KeyboardButton(text=btn2)],[types.KeyboardButton(text=btn3)]]
 kb = types.ReplyKeyboardMarkup(keyboard=kb,resize_keyboard=True,input_field_placeholder="Выберите что-либо =)")
-btn11 = "Еще"
-btn22 = "Хватит"
-kb1 = [[types.KeyboardButton(text=btn11),types.KeyboardButton(text=btn22)]]
-kb1 = types.ReplyKeyboardMarkup(keyboard=kb1,resize_keyboard=True,input_field_placeholder="Выберите что-либо =)")
+
 
 #события
 class Form(StatesGroup):
@@ -48,11 +45,9 @@ class Form(StatesGroup):
 async def process_name(message: types.Message, state: FSMContext)-> None:
     await state.update_data(noti=message.text)
     if "-" in message.text:
-        add_noty = [i.split("-") for i in message.text.split()]
+        add_noty = [i.split("-") for i in message.text.split("\n")]
         for i in add_noty:
-            func.learn_notify(i)
-            dt=datetime.datetime.now()
-            db.append([dt.strftime("%d.%m.%Y %H:%M"),i[0],i[1],"",""])
+            db.append([datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),i[0],str(func.learn_notify(i)),"",""])
         print(db)
         await message.answer(f"Задачи добавлены!")
         await state.clear()
@@ -66,9 +61,9 @@ async def start(message: types.Message, state: FSMContext):
         if message.text=="/start":
             await message.answer("Меню",reply_markup=kb)
 
-        if message.text == btn1 or message.text == btn11:
+        if message.text == btn1:
             await state.set_state(Form.noti)
-            await message.answer(f"Введите задачу и когда напомнить в формате: задача-когда/ДД.ММ.ГГГГ НН:ММ")
+            await message.answer(f"Введите задачу и когда напомнить в формате: задача-когда/ДД.ММ.ГГГГ НН:ММ", reply_markup=kb)
             
 
 

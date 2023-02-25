@@ -1,44 +1,53 @@
 from datetime import timedelta, datetime, date, time
+from settings import *
+import sqlite3
+import main
+import asyncio
 
 
 slovoform = {
-    "завтра": str((datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y')),
-    "послезавтра" : str((datetime.now() + timedelta(days=2)).strftime('%d.%m.%Y')),
-    "через" : "ввввввввввввввввв"
+    "завтра": str((datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y 7:00')),
+    "послезавтра" : str((datetime.now() + timedelta(days=2)).strftime('%d.%m.%Y 7:00')),
+    "через неделю" : str((datetime.now() + timedelta(days=7)).strftime('%d.%m.%Y 7:00'))
 }
 
-slovoform2 = {
-    "день": str((datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y')),
-    "неделя" : str((datetime.now() + timedelta(days=2)).strftime('%d.%m.%Y')),
-    "месяц" : "ввввввввввввввввв"
-}
-
-def learn_notify(notify_msg):
-    what = notify_msg[0]
+def learn_notify(notify_msg): #функция получает строку из сообщения, и вычленяет дату и время
     when = str(notify_msg[1])
-    if "через" in when:
-        data = when.split()
-        print(data)
-        return 
-
+    if "ежедневно" in when:
+        return when.split("в ")[1]
     for i,j in slovoform.items():
             if when in i: 
                 return j
     if len(str(when)) <=10:
-        return datetime.strptime(when, "%d.%m.%Y").date().strftime('%d.%m.%Y')
+        return datetime.strptime(when, "%d.%m.%Y").strftime('%d.%m.%Y 7:00')
     else:
         return (datetime.strptime(when, "%d.%m.%Y %H:%M").strftime('%d.%m.%Y %H:%M'))
 
 
-text = ("""sdfsdfsd-20.03.2022 12:55
-11ййййййй-завтра
-4343453453-послезавтра
-выаываыва-через 1 день
-sdfsdfsd-20.02.2022""")
+def query_for_db(query): #укороченая отправка запросов к бд
+    conn = sqlite3.connect(name_db)
+    cur = conn.cursor()
+    cur.execute(query)
+    conn.commit()
+    cur.close()
 
-add_noty = [i.split("-") for i in text.split("\n")]
-db=[]
-for i in add_noty:
-    print(str(learn_notify(i)))
-    #db.append([datetime.now().strftime("%d.%m.%Y %H:%M"),i[0],,"",""])
-#print(db)
+async def check_notify(): #функция для ежеминутной проверки бд на события о которых пора сообщить
+    now_datetime = datetime.now().strftime("%d.%m.%Y %H:%M")
+    now_date = datetime.now().strftime("%d.%m.%Y")
+    now_time = "13:00"#datetime.now().strftime("%H:%M")
+    conn = sqlite3.connect(name_db)
+    cur = conn.cursor()
+    cur.execute(f'SELECT * FROM notify WHERE (whens="{now_datetime}" or whens="{now_date}" or whens="{now_time}") and statuses!=1;')
+    one_result = cur.fetchall()
+    cur.close()
+    if one_result!=[]:
+        for j in one_result:
+            await main.send_notify(j)
+            
+
+
+
+#now_datetime = "20.02.2022 12:00"
+#now_date = "19.02.2022"
+#now_time = "13:20"
+#print(check_notify())

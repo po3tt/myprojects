@@ -29,8 +29,9 @@ scheduler = AsyncIOScheduler()
 #кнопки
 btn1 = "Добавить"
 btn2 = "Посмотреть БД"
-btn3 = "Тест"
-kb = [[types.KeyboardButton(text=btn1),types.KeyboardButton(text=btn2)],[types.KeyboardButton(text=btn3)]]
+btn3 = "Удалить задачи"
+btn4 = "Редактировать задачу"
+kb = [[types.KeyboardButton(text=btn1),types.KeyboardButton(text=btn2)],[types.KeyboardButton(text=btn3),types.KeyboardButton(text=btn4)]]
 kb = types.ReplyKeyboardMarkup(keyboard=kb,resize_keyboard=True,input_field_placeholder="Выберите что-либо =)")
 
 
@@ -39,11 +40,10 @@ class Form(StatesGroup):
     noti = State()
     times = State()
     id = State()
+    delete = State()
+    edit = State()
 #конец инициализации переменных---------------------------
             
-global itog
-itog = 10
-
 async def send_notify(text):         
     buttons = [[types.InlineKeyboardButton(text="Выполнено", callback_data="done-"+str(text[0])+"-"+str(text[3])),],
               [types.InlineKeyboardButton(text="Напомнить через...", callback_data="remind-"+str(text[0])),]]
@@ -98,6 +98,20 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
     else:
         await message.answer(f"Неправильный формат ввода!")
 
+@form_router.message(Form.delete)
+async def process_name(message: types.Message, state: FSMContext)-> None:
+    for i in message.text.split(" "):
+        func.query_for_db(f'DELETE FROM notify WHERE id = {int(i)};')
+    await state.clear()
+    await message.answer("Готово! Задачи удалены!")
+
+@form_router.message(Form.edit)
+async def process_name(message: types.Message, state: FSMContext)-> None:
+    func.query_for_db(f'UPDATE notify SET what="{message.text.split("-")[1]}", whens="{message.text.split("-")[2]}", statuses=0 WHERE id={int(message.text.split("-")[0])};') #id,user_id, data_add, what, whens, statuses, repeater
+    await state.clear()
+    await message.answer("Готово! Задача отредактирована!")
+
+
 @form_router.message()
 async def start(message: types.Message, state: FSMContext):
     print(message.text)
@@ -112,14 +126,23 @@ async def start(message: types.Message, state: FSMContext):
         if message.text == btn2:
             conn = sqlite3.connect(name_db)
             cur = conn.cursor()
-            cur.execute("SELECT * FROM notify WHERE statuses!=1;")
+            cur.execute("SELECT * FROM notify;")#WHERE statuses!=1
             one_result = cur.fetchall()
             #notify(id,user_id, data_add, what, whens, statuses, repeater)
             sms = ""
             one_result = sorted(one_result, key=lambda x: x[4])
             for i in one_result:
-                sms+=f'{i[3]} - {i[4]}\n'
+                sms+=f'{i[0]} - {i[3]} - {i[4]} - {i[5]}\n'
             await message.answer(sms)
+        
+        if message.text == btn3:
+            await state.set_state(Form.delete)
+            await message.answer(f"Указать ид задачи через пробел: 1 13 20 ...")
+
+        if message.text == btn4:
+            await state.set_state(Form.edit)
+            await message.answer(f"Форма ввода: ид-задача-когда")
+
 
 async def main():
     scheduler.add_job(func.check_notify, "interval", seconds=10)

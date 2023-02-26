@@ -1,5 +1,5 @@
 #подключение библиотек
-from settings import *
+from decouple import config
 import sys
 import asyncio
 import logging
@@ -15,7 +15,7 @@ from aiogram import Bot, Dispatcher, types, F, Router, html
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 #конец библиотек-----------------------------------------
 #создание таблиц БД
-connect = sqlite3.connect(name_db)
+connect = sqlite3.connect(config('name_db',default=''))
 current = connect.cursor()
 current.execute("CREATE TABLE IF NOT EXISTS notify(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT, data_add TEXT, what TEXT, whens TEXT, statuses BOOLEAN, repeater TEXT);")
 connect.commit()
@@ -23,7 +23,7 @@ current.close()
 
 # конец создание таблиц БД--------------------------------
 #инициализация переменных
-bot = Bot(token=my_token, parse_mode="HTML")
+bot = Bot(token=config('my_token',default=''), parse_mode="HTML")
 form_router = Router()
 scheduler = AsyncIOScheduler()
 #кнопки
@@ -50,9 +50,9 @@ async def send_notify(text):
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(str(text[1]), str(text[3]), reply_markup=keyboard)
     if len(text[4])<6:
-        func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%H:%M")+timedelta(minutes=func.interval_alarm)).strftime("%H:%M")}" WHERE id={str(text[0])};')
+        func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%H:%M")+timedelta(minutes=config("interval_alarm"))).strftime("%H:%M")}" WHERE id={str(text[0])};')
     else:
-        func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%d.%m.%Y %H:%M")+timedelta(minutes=func.interval_alarm)).strftime("%d.%m.%Y %H:%M")}" WHERE id={str(text[0])};')
+        func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%d.%m.%Y %H:%M")+timedelta(minutes=config("interval_alarm"))).strftime("%d.%m.%Y %H:%M")}" WHERE id={str(text[0])};')
 
     
 @form_router.callback_query()
@@ -115,7 +115,7 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
 @form_router.message()
 async def start(message: types.Message, state: FSMContext):
     print(message.text)
-    if str(message.from_user.id) in users:
+    if str(message.from_user.id) in config('users',default=''):
         if message.text=="/start":
             await message.answer("Меню",reply_markup=kb)
 
@@ -124,7 +124,7 @@ async def start(message: types.Message, state: FSMContext):
             await message.answer(f"Введите задачу и когда напомнить в формате: задача-когда/ДД.ММ.ГГГГ НН:ММ/ДД.ММ.ГГГГ/НН:ММ", reply_markup=kb)
             
         if message.text == btn2:
-            conn = sqlite3.connect(name_db)
+            conn = sqlite3.connect(config('name_db',default=''))
             cur = conn.cursor()
             cur.execute("SELECT * FROM notify;")#WHERE statuses!=1
             one_result = cur.fetchall()
@@ -145,7 +145,7 @@ async def start(message: types.Message, state: FSMContext):
 
 
 async def main():
-    scheduler.add_job(func.check_notify, "interval", seconds=10)
+    scheduler.add_job(func.check_notify, "interval", seconds=60)
     scheduler.start()
     dp = Dispatcher()
     dp.include_router(form_router)

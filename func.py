@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime, date, time
-from settings import *
+from decouple import config
 import sqlite3
 import main
 import asyncio

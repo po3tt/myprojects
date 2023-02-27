@@ -13,9 +13,10 @@ import func
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot, Dispatcher, types, F, Router, html
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+name_db = "noty.db"
 #конец библиотек-----------------------------------------
 #создание таблиц БД
-connect = sqlite3.connect(config('name_db',default=''))
+connect = sqlite3.connect(name_db)
 current = connect.cursor()
 current.execute("CREATE TABLE IF NOT EXISTS notify(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT, data_add TEXT, what TEXT, whens TEXT, statuses BOOLEAN, repeater TEXT);")
 connect.commit()
@@ -49,11 +50,14 @@ async def send_notify(text):
               [types.InlineKeyboardButton(text="Напомнить через...", callback_data="remind-"+str(text[0])),]]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(str(text[1]), str(text[3]), reply_markup=keyboard)
+    
+    """ если необходимо повторять сообщение каждый установленный интервал
+    interval_alarm = 5  #интервал повторного напоминания уведомления
     if len(text[4])<6:
         func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%H:%M")+timedelta(minutes=config("interval_alarm"))).strftime("%H:%M")}" WHERE id={str(text[0])};')
     else:
         func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%d.%m.%Y %H:%M")+timedelta(minutes=config("interval_alarm"))).strftime("%d.%m.%Y %H:%M")}" WHERE id={str(text[0])};')
-
+    """
     
 @form_router.callback_query()
 async def send_random_value(callback: types.CallbackQuery, state: FSMContext):
@@ -71,9 +75,9 @@ async def send_random_value(callback: types.CallbackQuery, state: FSMContext):
 async def process_name1(message: types.Message, state: FSMContext)-> None: #функция для кнопки "Напомнить через....", отрабатывает сообщение от пользователя чтобы перенести на заданный интервал
     new_time = datetime.now()
     if message.text == "г":
-        new_time = (datetime.now()+timedelta(days=365)).strftime("%d.%m.%Y 07:00")
+        new_time = (datetime.now()+timedelta(days=365)).strftime("%d.%m.%Y 7:00")
     elif "д" in message.text:
-        new_time = (datetime.now()+timedelta(days=int(message.text.split(" ")[0]))).strftime("%d.%m.%Y 07:00")
+        new_time = (datetime.now()+timedelta(days=int(message.text.split(" ")[0]))).strftime("%d.%m.%Y 7:00")
     elif "ч" in message.text:
         new_time = (datetime.now()+timedelta(hours=int(message.text.split(" ")[0]))).strftime("%d.%m.%Y %H:%M")
     else:
@@ -121,14 +125,15 @@ async def start(message: types.Message, state: FSMContext):
 
         if message.text == btn1:
             await state.set_state(Form.noti)
-            await message.answer(f"Введите задачу и когда напомнить в формате: задача-когда/ДД.ММ.ГГГГ НН:ММ/ДД.ММ.ГГГГ/НН:ММ", reply_markup=kb)
+            await message.answer(f"""
+Введите в формате: 
+задача-(ДД.ММ.ГГГГ НН:ММ | ДД.ММ.ГГГГ | ежедневно в НН:ММ | др ДД.ММ""", reply_markup=kb)
             
         if message.text == btn2:
-            conn = sqlite3.connect(config('name_db',default=''))
+            conn = sqlite3.connect(name_db)
             cur = conn.cursor()
-            cur.execute("SELECT * FROM notify;")#WHERE statuses!=1
+            cur.execute("SELECT * FROM notify;")
             one_result = cur.fetchall()
-            #notify(id,user_id, data_add, what, whens, statuses, repeater)
             sms = ""
             one_result = sorted(one_result, key=lambda x: x[4])
             for i in one_result:
@@ -145,7 +150,7 @@ async def start(message: types.Message, state: FSMContext):
 
 
 async def main():
-    scheduler.add_job(func.check_notify, "interval", seconds=60)
+    scheduler.add_job(func.check_notify, "interval", seconds=10)
     scheduler.start()
     dp = Dispatcher()
     dp.include_router(form_router)

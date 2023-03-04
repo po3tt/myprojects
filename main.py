@@ -168,7 +168,7 @@ async def start(message: types.Message, state: FSMContext):
             
 
 async def main():
-    scheduler.add_job(func.check_notify, "interval", seconds=10)
+    scheduler.add_job(func.check_notify, "interval", seconds=60)
     scheduler.start()
     dp = Dispatcher()
     dp.include_router(form_router)

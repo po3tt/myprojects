@@ -12,23 +12,23 @@ slovoform = {
 }
 
 weeks = {
-    "пн" : datetime.strptime(str("02.01.2023 7:00 monday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "вт" : datetime.strptime(str("03.01.2023 7:00 tuesday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "ср" : datetime.strptime(str("04.01.2023 7:00 wednesday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "чт" : datetime.strptime(str("05.01.2023 7:00 thursday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'), 
-    "пт" : datetime.strptime(str("06.01.2023 7:00 friday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "сб" : datetime.strptime(str("07.01.2023 7:00 saturday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "вс" : datetime.strptime(str("08.01.2023 7:00 sunday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A')
+    "пн" : datetime.strptime(str("02.01.2023 7:00 Monday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "вт" : datetime.strptime(str("03.01.2023 7:00 Tuesday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "ср" : datetime.strptime(str("04.01.2023 7:00 Wednesday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "чт" : datetime.strptime(str("05.01.2023 7:00 Thursday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'), 
+    "пт" : datetime.strptime(str("06.01.2023 7:00 Friday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "сб" : datetime.strptime(str("07.01.2023 7:00 Saturday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "вс" : datetime.strptime(str("08.01.2023 7:00 Sunday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A')
 }
 
 weeks2 = {
-    "пн" : "monday",
-    "вт" : "tuesday",
-    "ср" : "wednesday",
-    "чт" : "thursday",
-    "пт" : "friday",
-    "сб" : "saturday",
-    "вс" : "sunday"
+    "пн" : "Monday",
+    "вт" : "Tuesday",
+    "ср" : "Wednesday",
+    "чт" : "Thursday",
+    "пт" : "Friday",
+    "сб" : "Saturday",
+    "вс" : "Sunday"
 }
 
 def learn_notify(notify_msg): #функция получает строку из сообщения, и вычленяет дату и время
@@ -74,6 +74,7 @@ async def check_notify(): #функция для ежеминутной пров
     day_week = datetime.now().strftime("%H:%M %A")
     conn = sqlite3.connect(main.name_db)
     cur = conn.cursor()
+    print(f'SELECT * FROM notify WHERE (whens="{now_datetime}" or whens="{now_shortdatetime}" or whens="{now_time}" or whens="{day_week}") and statuses!=1;')
     cur.execute(f'SELECT * FROM notify WHERE (whens="{now_datetime}" or whens="{now_shortdatetime}" or whens="{now_time}" or whens="{day_week}") and statuses!=1;')
     one_result = cur.fetchall()
     cur.close()

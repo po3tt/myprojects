@@ -162,7 +162,6 @@ async def start(message: types.Message, state: FSMContext):
 
 
         if message.text == btn3:
-
             await state.set_state(Form.delete)
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)

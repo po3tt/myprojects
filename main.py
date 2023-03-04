@@ -33,7 +33,7 @@ btn2 = "Посмотреть БД"
 btn3 = "Удалить задачи"
 btn4 = "Редактировать задачу"
 kb = [[types.KeyboardButton(text=btn1),types.KeyboardButton(text=btn2)],[types.KeyboardButton(text=btn3),types.KeyboardButton(text=btn4)]]
-kb = types.ReplyKeyboardMarkup(keyboard=kb,resize_keyboard=True,input_field_placeholder="Выберите что-либо =)")
+kb = types.ReplyKeyboardMarkup(keyboard=kb,one_time_keyboard=False, resize_keyboard=True,input_field_placeholder="Выберите что-либо =)")
 
 
 #события
@@ -95,14 +95,7 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
         text_noti = ""
         add_noty = []
         for i in message.text.split("\n"):
-            if i.find(" - ")!=-1:
-                add_noty.append(i.split(" - "))
-            elif i.find("- ")!=-1:
-                add_noty.append(i.split("- "))
-            elif i.find(" -")!=-1:
-                add_noty.append(i.split(" -"))
-            elif i.find("-")!=-1:
-                add_noty.append(i.split("-"))
+            add_noty.append(i.replace(" - ","-").replace("- ","-").replace(" -","-").split("-"))
         for i in add_noty:
             text_noti+=i[0]+"\n"
             mass = func.learn_notify(i)
@@ -124,18 +117,29 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
 
 @form_router.message(Form.edit)
 async def process_name(message: types.Message, state: FSMContext)-> None:
-    func.query_for_db(f'UPDATE notify SET what="{message.text.split("-")[1]}", whens="{message.text.split("-")[2]}", statuses=0 WHERE id={int(message.text.split("-")[0])};')
+    new_text=message.text.replace(" - ","-").replace("- ","-").replace(" -","-")
+    conn = sqlite3.connect(name_db)
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM notify;")
+    one_result = cur.fetchall()
+    print(one_result)
+    if one_result!=[]:
+        func.query_for_db(f'UPDATE notify SET what="{new_text.split("-")[1]}", whens="{new_text.split("-")[2]}", statuses=0 WHERE id={int(new_text.split("-")[0])};')
+        await message.answer("Готово! Задача отредактирована!")
+    else:
+        await message.edit_text("Нечего редактировать!")
     await state.clear()
-    await message.answer("Готово! Задача отредактирована!")
+    
 
 
 @form_router.message()
 async def start(message: types.Message, state: FSMContext):
     if str(message.from_user.id) in config('users',default=''):
         if message.text=="/start":
-            await message.answer("Меню",reply_markup=kb)
+            await message.answer("Для начала вам необходимо добавить задачу",reply_markup=kb)
 
         if message.text == btn1:
+            
             await state.set_state(Form.noti)
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -147,23 +151,28 @@ async def start(message: types.Message, state: FSMContext):
             cur = conn.cursor()
             cur.execute("SELECT * FROM notify;")
             one_result = cur.fetchall()
-            sms = ""
+            sms = "Формат вывода:\nид - задача - когда - выполнение - повторение\n\n"
             one_result = sorted(one_result, key=lambda x: x[4])
             for i in one_result:
-                sms+=f'{i[0]} - {i[3]} - {i[4]} - {i[5]} - {i[6]}\n'
-            if sms != "":
-                await message.answer(sms)
+                sms+=f'''{i[0]} - {i[3]} - {i[4]} - {i[5]} - {i[6]}\n'''
+            if sms != "Формат вывода:\nид - задача - когда - выполнение - повторение\n\n":
+               await message.answer(sms)
             else:
                 await message.answer("Нет задач!")
 
 
         if message.text == btn3:
+
             await state.set_state(Form.delete)
-            await message.answer(f"Указать ид задачи через пробел: 1 13 20 ...")
+            buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+            await message.answer(f"Указать ид задачи через пробел: 1 13 20 ...", reply_markup=keyboard)
 
         if message.text == btn4:
             await state.set_state(Form.edit)
-            await message.answer(f"Форма ввода: ид-задача-когда")
+            buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+            await message.answer(f"Форма ввода: ид-задача-когда", reply_markup=keyboard)
                 
             
 

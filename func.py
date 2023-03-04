@@ -37,13 +37,12 @@ def learn_notify(notify_msg): #функция получает строку из
         for i,j in weeks.items():
             if when.split(" ")[1] in i: 
                 return j, "1"
-    #пт в ЧЧ:ММ
-    if "в" in when and when.split(" ")[0] in weeks2.keys():
+    if " в " in when and when.split(" ")[0] in weeks2.keys():
         for i,j in weeks2.items():
             if when.split(" ")[0] in i:
                 return str(datetime.strptime(str("01.01.2023 "+when.split(" ")[2]), "%d.%m.%Y %H:%M").strftime('%H:%M ')+j), "0"
-    
-    for i,j in weeks.items():
+    if when in weeks.keys():
+        for i,j in weeks.items():
             if when in i: 
                 return j, "0"
     if "в" in when and "ежедневно" not in when:
@@ -52,7 +51,8 @@ def learn_notify(notify_msg): #функция получает строку из
         return(datetime.strptime(str(when.split(" ")[1]+".2023"), "%d.%m.%Y").strftime('%d.%m 07:00')), 0
     if "ежедневно" in when:
         return (datetime.strptime(str("01.01.2023 "+when.split("в ")[1]), "%d.%m.%Y %H:%M").strftime('%H:%M')), "1"
-    for i,j in slovoform.items():
+    if when in slovoform.keys():
+        for i,j in slovoform.items():
             if when in i: 
                 return j, "0"
     if len(str(when)) <=10:
@@ -74,7 +74,6 @@ async def check_notify(): #функция для ежеминутной пров
     day_week = datetime.now().strftime("%H:%M %A")
     conn = sqlite3.connect(main.name_db)
     cur = conn.cursor()
-    print(f'SELECT * FROM notify WHERE (whens="{now_datetime}" or whens="{now_shortdatetime}" or whens="{now_time}" or whens="{day_week}") and statuses!=1;')
     cur.execute(f'SELECT * FROM notify WHERE (whens="{now_datetime}" or whens="{now_shortdatetime}" or whens="{now_time}" or whens="{day_week}") and statuses!=1;')
     one_result = cur.fetchall()
     cur.close()

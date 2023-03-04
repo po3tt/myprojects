@@ -136,7 +136,7 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
 async def start(message: types.Message, state: FSMContext):
     if str(message.from_user.id) in config('users',default=''):
         if message.text=="/start":
-            await message.answer("Для начала вам необходимо добавить задачу",reply_markup=kb)
+            await message.answer("Для начала вам необходимо добавить задачу!",reply_markup=kb)
 
         if message.text == btn1:
             

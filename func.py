@@ -3,8 +3,7 @@ from decouple import config
 import sqlite3
 import main
 import asyncio
-import locale
-locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
+
 
 slovoform = {
     "завтра": str((datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y 07:00')),
@@ -13,23 +12,23 @@ slovoform = {
 }
 
 weeks = {
-    "пн" : datetime.strptime(str("02.01.2023 7:00 понедельник"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "вт" : datetime.strptime(str("03.01.2023 7:00 вторник"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "ср" : datetime.strptime(str("04.01.2023 7:00 среда"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "чт" : datetime.strptime(str("05.01.2023 7:00 четверг"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'), 
-    "пт" : datetime.strptime(str("06.01.2023 7:00 пятница"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "сб" : datetime.strptime(str("07.01.2023 7:00 суббота"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
-    "вс" : datetime.strptime(str("08.01.2023 7:00 воскресенье"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A')
+    "пн" : datetime.strptime(str("02.01.2023 7:00 monday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "вт" : datetime.strptime(str("03.01.2023 7:00 tuesday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "ср" : datetime.strptime(str("04.01.2023 7:00 wednesday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "чт" : datetime.strptime(str("05.01.2023 7:00 thursday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'), 
+    "пт" : datetime.strptime(str("06.01.2023 7:00 friday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "сб" : datetime.strptime(str("07.01.2023 7:00 saturday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A'),
+    "вс" : datetime.strptime(str("08.01.2023 7:00 sunday"), "%d.%m.%Y %H:%M %A").strftime('%H:%M %A')
 }
 
 weeks2 = {
-    "пн" : "понедельник",
-    "вт" : "вторник",
-    "ср" : "среда",
-    "чт" : "четверг",
-    "пт" : "пятница",
-    "сб" : "суббота",
-    "вс" : "воскресенье"
+    "пн" : "monday",
+    "вт" : "tuesday",
+    "ср" : "wednesday",
+    "чт" : "thursday",
+    "пт" : "friday",
+    "сб" : "saturday",
+    "вс" : "sunday"
 }
 
 def learn_notify(notify_msg): #функция получает строку из сообщения, и вычленяет дату и время

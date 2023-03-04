@@ -45,39 +45,36 @@ class Form(StatesGroup):
     edit = State()
 #конец инициализации переменных---------------------------
             
-async def send_notify(text):         
-    buttons = [[types.InlineKeyboardButton(text="Выполнено", callback_data="done-"+str(text[0])+"-"+str(text[3])),],
-              [types.InlineKeyboardButton(text="Напомнить через...", callback_data="remind-"+str(text[0])),]]
+async def send_notify(text):
+    if text[6]!="1":      
+        func.query_for_db(f'UPDATE notify SET statuses=1 WHERE id={text[0]};')
+        buttons = [[types.InlineKeyboardButton(text="Напомнить через...", callback_data="remind-"+str(text[0])+"-"+str(text[3])),]]
+    else:
+        buttons = [[types.InlineKeyboardButton(text="Выполнено", callback_data="done-"+str(text[0])+"-"+str(text[3])),]]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(str(text[1]), str(text[3]), reply_markup=keyboard)
-    
-    """ если необходимо повторять сообщение каждый установленный интервал
-    interval_alarm = 5  #интервал повторного напоминания уведомления
-    if len(text[4])<6:
-        func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%H:%M")+timedelta(minutes=config("interval_alarm"))).strftime("%H:%M")}" WHERE id={str(text[0])};')
-    else:
-        func.query_for_db(f'UPDATE notify SET whens="{(datetime.strptime(text[4], "%d.%m.%Y %H:%M")+timedelta(minutes=config("interval_alarm"))).strftime("%d.%m.%Y %H:%M")}" WHERE id={str(text[0])};')
-    """
+
     
 @form_router.callback_query()
 async def send_random_value(callback: types.CallbackQuery, state: FSMContext):
-    print(callback.data)
     if callback.data.split("-")[0]=="done":
         func.query_for_db(f'UPDATE notify SET statuses=1 WHERE id={callback.data.split("-")[1]};')
-        await callback.message.answer(f'"{callback.data.split("-")[2]}" \n\n Задача выполнена!')
+        await callback.message.edit_text(f'"{callback.data.split("-")[2]}" \n\n Задача выполнена!')
     elif callback.data.split("-")[0]=="remind":
         await state.set_state(Form.times)
         await state.update_data(id=callback.data.split("-")[1])
-        await callback.message.answer(f"Через сколько напомнить? ('1'-мин, '1 ч'-час, '1 д'-день, 'г'-год)")
-            
+        await callback.message.answer(f'Через сколько напомнить о "{callback.data.split("-")[2]}" ? ("1"-мин, "1 ч"-час, "1 д"-день, "г"-год)')
+    if callback.data == "отменить":
+        await state.clear()
+        await callback.message.edit_text(f"Отменено!")
 
 @form_router.message(Form.times)
 async def process_name1(message: types.Message, state: FSMContext)-> None: #функция для кнопки "Напомнить через....", отрабатывает сообщение от пользователя чтобы перенести на заданный интервал
     new_time = datetime.now()
     if message.text == "г":
-        new_time = (datetime.now()+timedelta(days=365)).strftime("%d.%m.%Y 7:00")
+        new_time = (datetime.now()+timedelta(days=365)).strftime("%d.%m.%Y 07:00")
     elif "д" in message.text:
-        new_time = (datetime.now()+timedelta(days=int(message.text.split(" ")[0]))).strftime("%d.%m.%Y 7:00")
+        new_time = (datetime.now()+timedelta(days=int(message.text.split(" ")[0]))).strftime("%d.%m.%Y 07:00")
     elif "ч" in message.text:
         new_time = (datetime.now()+timedelta(hours=int(message.text.split(" ")[0]))).strftime("%d.%m.%Y %H:%M")
     else:
@@ -85,6 +82,7 @@ async def process_name1(message: types.Message, state: FSMContext)-> None: #фу
     await state.update_data(times=message.text)
     user_data = await state.get_data()
     func.query_for_db(f'UPDATE notify SET whens="{new_time}" WHERE id={user_data["id"]};')
+    await message.delete()
     await message.answer(f"Отлично! Напомню {new_time}!")
     await state.clear()
     
@@ -94,13 +92,28 @@ async def process_name1(message: types.Message, state: FSMContext)-> None: #фу
 async def process_name(message: types.Message, state: FSMContext)-> None:
     await state.update_data(noti=message.text)
     if "-" in message.text:
-        add_noty = [i.split("-") for i in message.text.split("\n")]
+        text_noti = ""
+        add_noty = []
+        for i in message.text.split("\n"):
+            if i.find(" - ")!=-1:
+                add_noty.append(i.split(" - "))
+            elif i.find("- ")!=-1:
+                add_noty.append(i.split("- "))
+            elif i.find(" -")!=-1:
+                add_noty.append(i.split(" -"))
+            elif i.find("-")!=-1:
+                add_noty.append(i.split("-"))
         for i in add_noty:
-            func.query_for_db(f'INSERT INTO notify(user_id, data_add, what, whens, statuses) VALUES ("{message.from_user.id}","{datetime.now().strftime("%d.%m.%Y %H:%M")}","{i[0]}","{func.learn_notify(i)}",0);')
-        await message.answer(f"Задачи добавлены!")
+            text_noti+=i[0]+"\n"
+            mass = func.learn_notify(i)
+            func.query_for_db(f'INSERT INTO notify(user_id, data_add, what, whens, statuses, repeater) VALUES ("{message.from_user.id}","{datetime.now().strftime("%d.%m.%Y %H:%M")}","{i[0]}","{mass[0]}",0,"{mass[1]}");')
+        await message.answer(f"{text_noti} \nВыполним точно в срок!")
         await state.clear()
     else:
-        await message.answer(f"Неправильный формат ввода!")
+        await message.delete()
+        await message.edit_text(f"Неправильный формат ввода! Обрати внимание на образец!")
+        
+        
 
 @form_router.message(Form.delete)
 async def process_name(message: types.Message, state: FSMContext)-> None:
@@ -111,24 +124,24 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
 
 @form_router.message(Form.edit)
 async def process_name(message: types.Message, state: FSMContext)-> None:
-    func.query_for_db(f'UPDATE notify SET what="{message.text.split("-")[1]}", whens="{message.text.split("-")[2]}", statuses=0 WHERE id={int(message.text.split("-")[0])};') #id,user_id, data_add, what, whens, statuses, repeater
+    func.query_for_db(f'UPDATE notify SET what="{message.text.split("-")[1]}", whens="{message.text.split("-")[2]}", statuses=0 WHERE id={int(message.text.split("-")[0])};')
     await state.clear()
     await message.answer("Готово! Задача отредактирована!")
 
 
 @form_router.message()
 async def start(message: types.Message, state: FSMContext):
-    print(message.text)
     if str(message.from_user.id) in config('users',default=''):
         if message.text=="/start":
             await message.answer("Меню",reply_markup=kb)
 
         if message.text == btn1:
             await state.set_state(Form.noti)
-            await message.answer(f"""
-Введите в формате: 
-задача-(ДД.ММ.ГГГГ НН:ММ | ДД.ММ.ГГГГ | ежедневно в НН:ММ | др ДД.ММ""", reply_markup=kb)
-            
+            buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+            await message.answer(
+            f"""Введите в формате:\nзадача-ДД.ММ.ГГГГ ЧЧ:ММ | ДД.ММ.ГГГГ | ежедневно в ЧЧ:ММ | др ДД.ММ | в ЧЧ:ММ | каждую пт | вс | пт в ЧЧ:ММ)""", reply_markup=keyboard)
+        
         if message.text == btn2:
             conn = sqlite3.connect(name_db)
             cur = conn.cursor()
@@ -137,9 +150,13 @@ async def start(message: types.Message, state: FSMContext):
             sms = ""
             one_result = sorted(one_result, key=lambda x: x[4])
             for i in one_result:
-                sms+=f'{i[0]} - {i[3]} - {i[4]} - {i[5]}\n'
-            await message.answer(sms)
-        
+                sms+=f'{i[0]} - {i[3]} - {i[4]} - {i[5]} - {i[6]}\n'
+            if sms != "":
+                await message.answer(sms)
+            else:
+                await message.answer("Нет задач!")
+
+
         if message.text == btn3:
             await state.set_state(Form.delete)
             await message.answer(f"Указать ид задачи через пробел: 1 13 20 ...")
@@ -147,10 +164,11 @@ async def start(message: types.Message, state: FSMContext):
         if message.text == btn4:
             await state.set_state(Form.edit)
             await message.answer(f"Форма ввода: ид-задача-когда")
-
+                
+            
 
 async def main():
-    scheduler.add_job(func.check_notify, "interval", seconds=59)
+    scheduler.add_job(func.check_notify, "interval", seconds=10)
     scheduler.start()
     dp = Dispatcher()
     dp.include_router(form_router)
@@ -158,3 +176,5 @@ async def main():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())
+
+

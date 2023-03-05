@@ -144,7 +144,7 @@ async def start(message: types.Message, state: FSMContext):
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
             await message.answer(
-            f"""Введите в формате:\nзадача-ДД.ММ.ГГГГ ЧЧ:ММ | ДД.ММ.ГГГГ | ежедневно в ЧЧ:ММ | др ДД.ММ | в ЧЧ:ММ | каждую пт | вс | пт в ЧЧ:ММ)""", reply_markup=keyboard)
+            f"""Введите в формате:\nзадача-ДД.ММ.ГГГГ ЧЧ:ММ | ДД.ММ.ГГГГ | ежедневно в ЧЧ:ММ | др ДД.ММ | в ЧЧ:ММ | каждую пт | вс | пт в ЧЧ:ММ | завтра | послезавтра | через неделю)""", reply_markup=keyboard)
         
         if message.text == btn2:
             conn = sqlite3.connect(name_db)
@@ -152,7 +152,7 @@ async def start(message: types.Message, state: FSMContext):
             cur.execute("SELECT * FROM notify;")
             one_result = cur.fetchall()
             sms = "Формат вывода:\nид - задача - когда - выполнение - повторение\n\n"
-            one_result = sorted(one_result, key=lambda x: x[4])
+            #one_result = sorted(one_result, key=lambda x: x[4] if datetime.strptime(x[4],"%d.%m.%Y %H:%M") else (x[4] if datetime.strptime(x[4],"%H:%M") else (x[4] if datetime.strptime(x[4],"%d.%m.%Y") else (x[4] if datetime.strptime(x[4],"%d.%m %H:%M") else (x[4] if datetime.strptime(x[4],"%H:%M %A") else "")))))
             for i in one_result:
                 sms+=f'''{i[0]} - {i[3]} - {i[4]} - {i[5]} - {i[6]}\n'''
             if sms != "Формат вывода:\nид - задача - когда - выполнение - повторение\n\n":

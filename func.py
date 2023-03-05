@@ -45,14 +45,13 @@ def learn_notify(notify_msg): #функция получает строку из
         for i,j in weeks.items():
             if when in i: 
                 return j, "0"
-    if "в" in when and "ежедневно" not in when:
+    if "в " in when and "ежедневно" not in when:
         return (datetime.strptime(str("01.01.2023 "+when.split(" ")[1]), "%d.%m.%Y %H:%M").strftime('%H:%M')), "0"
     if "др" in when:   
         return(datetime.strptime(str(when.split(" ")[1]+".2023"), "%d.%m.%Y").strftime('%d.%m 07:00')), 0
     if "ежедневно" in when:
         return (datetime.strptime(str("01.01.2023 "+when.split("в ")[1]), "%d.%m.%Y %H:%M").strftime('%H:%M')), "1"
-    if when in slovoform.keys():
-        for i,j in slovoform.items():
+    for i,j in slovoform.items():
             if when in i: 
                 return j, "0"
     if len(str(when)) <=10:

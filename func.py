@@ -33,6 +33,8 @@ weeks2 = {
 
 def learn_notify(notify_msg): #функция получает строку из сообщения, и вычленяет дату и время
     when = str(notify_msg[1])
+    if "завтра в" in when:
+        return datetime.strptime(str((datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y')+" "+when.split(" в ")[1]), "%d.%m.%Y %H:%M").strftime('%d.%m.%Y %H:%M'), "0"
     if "каждый" in when or "каждую" in when or "каждое" in when:
         for i,j in weeks.items():
             if when.split(" ")[1] in i: 

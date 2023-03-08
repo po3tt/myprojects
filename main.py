@@ -44,7 +44,10 @@ class Form(StatesGroup):
     delete = State()
     edit = State()
 #конец инициализации переменных---------------------------
-            
+async def save_msg(id,msg):
+    print(id,msg)
+
+
 async def send_notify(text):
     if text[6]!="1":      
         func.query_for_db(f'UPDATE notify SET statuses=1 WHERE id={text[0]};')
@@ -53,6 +56,7 @@ async def send_notify(text):
         buttons = [[types.InlineKeyboardButton(text="Выполнено", callback_data="done-"+str(text[0])+"-"+str(text[3])),]]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(str(text[1]), str(text[3]), reply_markup=keyboard)
+    
 
     
 @form_router.callback_query()
@@ -100,16 +104,16 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
             text_noti+=i[0]+"\n"
             mass = func.learn_notify(i)
             func.query_for_db(f'INSERT INTO notify(user_id, data_add, what, whens, statuses, repeater) VALUES ("{message.from_user.id}","{datetime.now().strftime("%d.%m.%Y %H:%M")}","{i[0]}","{mass[0]}",0,"{mass[1]}");')
-        await message.answer(f"{text_noti} \nВыполним точно в срок!")
+            await message.answer(f"{text_noti} \nВыполним точно в срок!")
         await state.clear()
     else:
         await message.delete()
-        await message.edit_text(f"Неправильный формат ввода! Обрати внимание на образец!")
-        
+        await message.answer(f"Неправильный формат ввода! Обрати внимание на образец!")
         
 
 @form_router.message(Form.delete)
 async def process_name(message: types.Message, state: FSMContext)-> None:
+    await save_msg(message.message_id, message.text)
     for i in message.text.split(" "):
         func.query_for_db(f'DELETE FROM notify WHERE id = {int(i)};')
     await state.clear()
@@ -136,7 +140,8 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
 async def start(message: types.Message, state: FSMContext):
     if str(message.from_user.id) in config('users',default=''):
         if message.text=="/start":
-            await message.answer("Для начала вам необходимо добавить задачу!",reply_markup=kb)
+            msg = await message.answer("Для начала вам необходимо добавить задачу!",reply_markup=kb)
+            await save_msg(msg.message_id, msg.text)
 
         if message.text == btn1:
             
@@ -144,7 +149,7 @@ async def start(message: types.Message, state: FSMContext):
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
             await message.answer(
-            f"""Введите в формате:\nзадача-ДД.ММ.ГГГГ ЧЧ:ММ | ДД.ММ.ГГГГ | ежедневно в ЧЧ:ММ | др ДД.ММ | в ЧЧ:ММ | каждую пт | вс | пт в ЧЧ:ММ | завтра | послезавтра | через неделю)""", reply_markup=keyboard)
+            f"""Введите в формате:\nЗАДАЧА - КОГДА_ВЫПОЛНИТЬ\n\nВарианты для напоминания: \nДД.ММ.ГГГГ ЧЧ:ММ \nДД.ММ.ГГГГ \nежедневно в ЧЧ:ММ \nдр ДД.ММ \nв ЧЧ:ММ \nкаждую/-ый/-ое ДН \nДН \nДН в ЧЧ:ММ \nзавтра \nпослезавтра \nчерез неделю \nзавтра в ЧЧ:ММ \n\n\n ДН - день недели в формате пн или вт или ср...""", reply_markup=keyboard)
         
         if message.text == btn2:
             conn = sqlite3.connect(name_db)
@@ -166,7 +171,7 @@ async def start(message: types.Message, state: FSMContext):
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
             await message.answer(f"Указать ид задачи через пробел: 1 13 20 ...", reply_markup=keyboard)
-
+            
         if message.text == btn4:
             await state.set_state(Form.edit)
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]

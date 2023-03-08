@@ -4,6 +4,7 @@ import sys
 import asyncio
 import logging
 import sqlite3
+import time
 from aiogram import Bot, Dispatcher, types, F, Router, html
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup
@@ -39,13 +40,22 @@ kb = types.ReplyKeyboardMarkup(keyboard=kb,one_time_keyboard=False, resize_keybo
 #события
 class Form(StatesGroup):
     noti = State()
+    noti1 = State()
     times = State()
+    times1 = State()
     id = State()
     delete = State()
+    delete1 = State()
     edit = State()
+    edit1 = State()
+
 #конец инициализации переменных---------------------------
 async def save_msg(id,msg):
-    print(id,msg)
+    await bot.delete_message(id, msg)
+
+async def del_msg(id,msg,sec):
+    await asyncio.sleep(sec)
+    await bot.delete_message(id, msg)
 
 
 async def send_notify(text):
@@ -67,10 +77,13 @@ async def send_random_value(callback: types.CallbackQuery, state: FSMContext):
     elif callback.data.split("-")[0]=="remind":
         await state.set_state(Form.times)
         await state.update_data(id=callback.data.split("-")[1])
-        await callback.message.answer(f'Через сколько напомнить о "{callback.data.split("-")[2]}" ? ("1"-мин, "1 ч"-час, "1 д"-день, "г"-год)')
+        msg = await callback.message.answer(f'Через сколько напомнить о "{callback.data.split("-")[2]}" ? ("1"-мин, "1 ч"-час, "1 д"-день, "г"-год)')
+        await state.update_data(times1=[msg.chat.id, msg.message_id])
+
     if callback.data == "отменить":
         await state.clear()
         await callback.message.edit_text(f"Отменено!")
+        await del_msg(callback.message.chat.id, callback.message.message_id, 10)
 
 @form_router.message(Form.times)
 async def process_name1(message: types.Message, state: FSMContext)-> None: #функция для кнопки "Напомнить через....", отрабатывает сообщение от пользователя чтобы перенести на заданный интервал
@@ -88,7 +101,9 @@ async def process_name1(message: types.Message, state: FSMContext)-> None: #фу
     func.query_for_db(f'UPDATE notify SET whens="{new_time}" WHERE id={user_data["id"]};')
     await message.delete()
     await message.answer(f"Отлично! Напомню {new_time}!")
+    msg_data = await state.get_data()
     await state.clear()
+    await save_msg(msg_data["times1"][0], msg_data["times1"][1])
     
 
 
@@ -101,38 +116,62 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
         for i in message.text.split("\n"):
             add_noty.append(i.replace(" - ","-").replace("- ","-").replace(" -","-").split("-"))
         for i in add_noty:
-            text_noti+=i[0]+"\n"
             mass = func.learn_notify(i)
             func.query_for_db(f'INSERT INTO notify(user_id, data_add, what, whens, statuses, repeater) VALUES ("{message.from_user.id}","{datetime.now().strftime("%d.%m.%Y %H:%M")}","{i[0]}","{mass[0]}",0,"{mass[1]}");')
-            await message.answer(f"{text_noti} \nВыполним точно в срок!")
+            text_noti+=i[0]+" - "+i[1]+"\n"
+        await save_msg(message.chat.id, message.message_id)
+        msg_data = await state.get_data()
         await state.clear()
+        await save_msg(msg_data["noti1"][0], msg_data["noti1"][1])
+        await message.answer(f"{text_noti} \nВыполним точно в срок!")
+        #await bot.edit_message_text(f"{text_noti} \nВыполним точно в срок!", chat_id=msg_data["noti1"][0], message_id=msg_data["noti1"][1])
     else:
         await message.delete()
-        await message.answer(f"Неправильный формат ввода! Обрати внимание на образец!")
+        msg = await message.answer(f"Неправильный формат ввода! Обрати внимание на образец!")
+        await del_msg(msg.chat.id,msg.message_id,10)
+
+    
         
 
 @form_router.message(Form.delete)
 async def process_name(message: types.Message, state: FSMContext)-> None:
-    await save_msg(message.message_id, message.text)
+    await save_msg(message.chat.id, message.message_id)
+    del_message = ""
     for i in message.text.split(" "):
-        func.query_for_db(f'DELETE FROM notify WHERE id = {int(i)};')
+        conn = sqlite3.connect(name_db)
+        cur = conn.cursor()
+        cur.execute(f"SELECT * FROM notify WHERE id = {int(i)};")
+        one_result = cur.fetchall()
+        if one_result!=[]:
+            func.query_for_db(f'DELETE FROM notify WHERE id = {int(i)};')
+            del_message+=(i+" - Удалена \n")
+        else:
+            del_message+=(i+" - Нет такой задачи\n")
+        cur.close() 
+    await message.answer(f"Удаление проведено! Результат: \n{del_message}")
+    msg_data = await state.get_data()
     await state.clear()
-    await message.answer("Готово! Задачи удалены!")
+    await save_msg(msg_data["delete1"][0], msg_data["delete1"][1])
+
 
 @form_router.message(Form.edit)
 async def process_name(message: types.Message, state: FSMContext)-> None:
+    await save_msg(message.chat.id, message.message_id)
     new_text=message.text.replace(" - ","-").replace("- ","-").replace(" -","-")
     conn = sqlite3.connect(name_db)
     cur = conn.cursor()
-    cur.execute("SELECT * FROM notify;")
+    cur.execute(f'SELECT * FROM notify WHERE id={int(new_text.split("-")[0])};')
     one_result = cur.fetchall()
-    print(one_result)
+    cur.close()
     if one_result!=[]:
         func.query_for_db(f'UPDATE notify SET what="{new_text.split("-")[1]}", whens="{new_text.split("-")[2]}", statuses=0 WHERE id={int(new_text.split("-")[0])};')
-        await message.answer("Готово! Задача отредактирована!")
+        await message.answer(f"Готово! Задача\n{message.text} \nотредактирована!")
+        msg_data = await state.get_data()
+        await save_msg(msg_data["edit1"][0], msg_data["edit1"][1])
+        await state.clear()
     else:
-        await message.edit_text("Нечего редактировать!")
-    await state.clear()
+        msg = await message.answer("Такой задачи нет или что-то пошло не так! Попробуйте еще раз!")
+        await del_msg(msg.chat.id,msg.message_id,10)
     
 
 
@@ -140,43 +179,49 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
 async def start(message: types.Message, state: FSMContext):
     if str(message.from_user.id) in config('users',default=''):
         if message.text=="/start":
-            msg = await message.answer("Для начала вам необходимо добавить задачу!",reply_markup=kb)
-            await save_msg(msg.message_id, msg.text)
+            await message.answer("Для начала вам необходимо добавить задачу!",reply_markup=kb)
+            
 
         if message.text == btn1:
-            
             await state.set_state(Form.noti)
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-            await message.answer(
-            f"""Введите в формате:\nЗАДАЧА - КОГДА_ВЫПОЛНИТЬ\n\nВарианты для напоминания: \nДД.ММ.ГГГГ ЧЧ:ММ \nДД.ММ.ГГГГ \nежедневно в ЧЧ:ММ \nдр ДД.ММ \nв ЧЧ:ММ \nкаждую/-ый/-ое ДН \nДН \nДН в ЧЧ:ММ \nзавтра \nпослезавтра \nчерез неделю \nзавтра в ЧЧ:ММ \n\n\n ДН - день недели в формате пн или вт или ср...""", reply_markup=keyboard)
-        
+            await save_msg(message.chat.id, message.message_id)
+            msg = await message.answer(f"""Введите в формате:\nЗАДАЧА - КОГДА_ВЫПОЛНИТЬ\n\nВарианты для напоминания: \nДД.ММ.ГГГГ ЧЧ:ММ \nДД.ММ.ГГГГ \nежедневно в ЧЧ:ММ \nдр ДД.ММ \nв ЧЧ:ММ \nкаждую/-ый/-ое ДН \nДН \nДН в ЧЧ:ММ \nзавтра \nпослезавтра \nчерез неделю \nзавтра в ЧЧ:ММ \n\n\n ДН - день недели в формате пн или вт или ср...""", reply_markup=keyboard)
+            await state.update_data(noti1=[msg.chat.id, msg.message_id])
+            
         if message.text == btn2:
             conn = sqlite3.connect(name_db)
             cur = conn.cursor()
             cur.execute("SELECT * FROM notify;")
             one_result = cur.fetchall()
+            await save_msg(message.chat.id, message.message_id)
             sms = "Формат вывода:\nид - задача - когда - выполнение - повторение\n\n"
             #one_result = sorted(one_result, key=lambda x: x[4] if datetime.strptime(x[4],"%d.%m.%Y %H:%M") else (x[4] if datetime.strptime(x[4],"%H:%M") else (x[4] if datetime.strptime(x[4],"%d.%m.%Y") else (x[4] if datetime.strptime(x[4],"%d.%m %H:%M") else (x[4] if datetime.strptime(x[4],"%H:%M %A") else "")))))
             for i in one_result:
                 sms+=f'''{i[0]} - {i[3]} - {i[4]} - {i[5]} - {i[6]}\n'''
             if sms != "Формат вывода:\nид - задача - когда - выполнение - повторение\n\n":
-               await message.answer(sms)
+               msg = await message.answer(sms)
             else:
-                await message.answer("Нет задач!")
+               msg = await message.answer("Нет задач!")
+            
 
 
         if message.text == btn3:
             await state.set_state(Form.delete)
+            await save_msg(message.chat.id, message.message_id)
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-            await message.answer(f"Указать ид задачи через пробел: 1 13 20 ...", reply_markup=keyboard)
+            msg = await message.answer(f"Указать ид задачи через пробел: 1 13 20 ...", reply_markup=keyboard)
+            await state.update_data(delete1=[msg.chat.id, msg.message_id])
             
         if message.text == btn4:
             await state.set_state(Form.edit)
+            await save_msg(message.chat.id, message.message_id)
             buttons = [[types.InlineKeyboardButton(text="Отмена", callback_data="отменить"),]]
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-            await message.answer(f"Форма ввода: ид-задача-когда", reply_markup=keyboard)
+            msg = await message.answer(f"Форма ввода: ид-задача-когда", reply_markup=keyboard)
+            await state.update_data(edit1=[msg.chat.id, msg.message_id])
                 
             
 

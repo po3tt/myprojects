@@ -31,35 +31,40 @@ weeks2 = {
     "вс" : "Sunday"
 }
 
+
+
+
+
+
 def learn_notify(notify_msg): #функция получает строку из сообщения, и вычленяет дату и время
-    when = str(notify_msg[1])
-    if "завтра в" in when:
-        return datetime.strptime(str((datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y')+" "+when.split(" в ")[1]), "%d.%m.%Y %H:%M").strftime('%d.%m.%Y %H:%M'), "0"
-    if "каждый" in when or "каждую" in when or "каждое" in when:
-        for i,j in weeks.items():
-            if when.split(" ")[1] in i: 
-                return j, "1"
-    if " в " in when and when.split(" ")[0] in weeks2.keys():
-        for i,j in weeks2.items():
-            if when.split(" ")[0] in i:
-                return str(datetime.strptime(str("01.01.2023 "+when.split(" ")[2]), "%d.%m.%Y %H:%M").strftime('%H:%M ')+j), "0"
-    if when in weeks.keys():
-        for i,j in weeks.items():
-            if when in i: 
-                return j, "0"
-    if "в " in when and "ежедневно" not in when:
-        return (datetime.strptime(str("01.01.2023 "+when.split(" ")[1]), "%d.%m.%Y %H:%M").strftime('%H:%M')), "0"
-    if "др" in when:   
-        return(datetime.strptime(str(when.split(" ")[1]+".2023"), "%d.%m.%Y").strftime('%d.%m 07:00')), 0
-    if "ежедневно" in when:
-        return (datetime.strptime(str("01.01.2023 "+when.split("в ")[1]), "%d.%m.%Y %H:%M").strftime('%H:%M')), "1"
-    for i,j in slovoform.items():
-            if when in i: 
-                return j, "0"
-    if len(str(when)) <=10:
-        return datetime.strptime(when, "%d.%m.%Y").strftime('%d.%m.%Y 07:00'), "0"
-    else:
-        return (datetime.strptime(when, "%d.%m.%Y %H:%M").strftime('%d.%m.%Y %H:%M')), "0"
+        when = str(notify_msg[1])
+        if "завтра в" in when:
+            return datetime.strptime(str((datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y')+" "+when.split(" в ")[1]), "%d.%m.%Y %H:%M").strftime('%d.%m.%Y %H:%M'), "0"
+        if "каждый" in when or "каждую" in when or "каждое" in when:
+            for i,j in weeks.items():
+                if when.split(" ")[1] in i: 
+                    return j, "1"
+        if " в " in when and when.split(" ")[0] in weeks2.keys():
+            for i,j in weeks2.items():
+                if when.split(" ")[0] in i:
+                    return str(datetime.strptime(str("01.01.2023 "+when.split(" ")[2]), "%d.%m.%Y %H:%M").strftime('%H:%M ')+j), "0"
+        if when in weeks.keys():
+            for i,j in weeks.items():
+                if when in i: 
+                    return j, "0"
+        if "в " in when and "ежедневно" not in when:
+            return (datetime.strptime(str("01.01.2023 "+when.split(" ")[1]), "%d.%m.%Y %H:%M").strftime('%H:%M')), "0"
+        if "др" in when:   
+            return(datetime.strptime(str(when.split(" ")[1]+".2023"), "%d.%m.%Y").strftime('%d.%m 07:00')), 0
+        if "ежедневно" in when:
+            return (datetime.strptime(str("01.01.2023 "+when.split("в ")[1]), "%d.%m.%Y %H:%M").strftime('%H:%M')), "1"
+        for i,j in slovoform.items():
+                if when in i: 
+                    return j, "0"
+        if len(str(when)) <=10:
+            return datetime.strptime(when, "%d.%m.%Y").strftime('%d.%m.%Y 07:00'), "0"
+        else:
+            return (datetime.strptime(when, "%d.%m.%Y %H:%M").strftime('%d.%m.%Y %H:%M')), "0"
 
 def query_for_db(query): #укороченая отправка запросов к бд
     conn = sqlite3.connect(main.name_db)

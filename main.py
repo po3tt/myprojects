@@ -148,7 +148,8 @@ async def process_name(message: types.Message, state: FSMContext)-> None:
         else:
             del_message+=(i+" - Нет такой задачи\n")
         cur.close() 
-    await message.answer(f"Удаление проведено! Результат: \n{del_message}")
+    msg = await message.answer(f"Удаление проведено! Результат: \n{del_message}")
+    await del_msg(msg.chat.id,msg.message_id,300)
     msg_data = await state.get_data()
     await state.clear()
     await save_msg(msg_data["delete1"][0], msg_data["delete1"][1])
@@ -202,9 +203,10 @@ async def start(message: types.Message, state: FSMContext):
                 sms+=f'''{i[0]} - {i[3]} - {i[4]} - {i[5]} - {i[6]}\n'''
             if sms != "Формат вывода:\nид - задача - когда - выполнение - повторение\n\n":
                msg = await message.answer(sms)
+               await del_msg(msg.chat.id,msg.message_id,300)
             else:
                msg = await message.answer("Нет задач!")
-            
+               await del_msg(msg.chat.id,msg.message_id,30)
 
 
         if message.text == btn3:

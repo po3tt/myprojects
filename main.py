@@ -98,7 +98,7 @@ async def process_name1(message: types.Message, state: FSMContext)-> None: #фу
         new_time = (datetime.now()+timedelta(minutes=int(message.text.split(" ")[0]))).strftime("%d.%m.%Y %H:%M")
     await state.update_data(times=message.text)
     user_data = await state.get_data()
-    func.query_for_db(f'UPDATE notify SET whens="{new_time}" WHERE id={user_data["id"]};')
+    func.query_for_db(f'UPDATE notify SET whens="{new_time}", statuses = 0 WHERE id={user_data["id"]};')
     await message.delete()
     await message.answer(f"Отлично! Напомню {new_time}!")
     msg_data = await state.get_data()
